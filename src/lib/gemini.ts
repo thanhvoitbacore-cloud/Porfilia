@@ -11,7 +11,7 @@ function getApiKey(customKey?: string): string {
 function getAIClient(customKey?: string) {
   const key = getApiKey(customKey);
   if (!key) {
-    throw new Error('GEMINI_API_KEY is missing. Please set it in .env.local or enter custom API key in Settings.');
+    throw new Error('Chưa tìm thấy Gemini API Key. Vui lòng mở "Settings" trên góc phải web và dán API Key của bạn hoặc cài đặt biến môi trường GEMINI_API_KEY trên Vercel.');
   }
   return new GoogleGenAI({ apiKey: key });
 }

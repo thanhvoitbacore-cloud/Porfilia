@@ -8,10 +8,15 @@ export async function parseDocumentAction(
   industryInput?: string,
   customApiKey?: string
 ): Promise<{ data: PortfolioData; detectedIndustry: string }> {
-  if (!rawText || typeof rawText !== 'string' || rawText.trim().length === 0) {
-    throw new Error('Vui lòng cung cấp văn bản hồ sơ hoặc nội dung file.');
+  try {
+    if (!rawText || typeof rawText !== 'string' || rawText.trim().length === 0) {
+      throw new Error('Vui lòng cung cấp văn bản hồ sơ hoặc nội dung file.');
+    }
+    return await parseDocumentWithGemini(rawText, industryInput, customApiKey);
+  } catch (error: any) {
+    console.error('Error in parseDocumentAction:', error);
+    throw new Error(error.message || 'Không thể kết nối Gemini API. Vui lòng kiểm tra lại API Key trong phần Settings.');
   }
-  return await parseDocumentWithGemini(rawText, industryInput, customApiKey);
 }
 
 export async function generateVibesAction(
@@ -20,15 +25,20 @@ export async function generateVibesAction(
   referenceImageBase64?: string,
   customApiKey?: string
 ): Promise<VibeProposal[]> {
-  if (!industry) {
-    throw new Error('Vui lòng cung cấp ngành nghề chuyên môn.');
+  try {
+    if (!industry) {
+      throw new Error('Vui lòng cung cấp ngành nghề chuyên môn.');
+    }
+    return await generateVibesWithGemini(
+      industry,
+      targetRole || 'Professional',
+      referenceImageBase64,
+      customApiKey
+    );
+  } catch (error: any) {
+    console.error('Error in generateVibesAction:', error);
+    throw new Error(error.message || 'Không thể tạo đề xuất Vibe. Vui lòng thử lại.');
   }
-  return await generateVibesWithGemini(
-    industry,
-    targetRole || 'Professional',
-    referenceImageBase64,
-    customApiKey
-  );
 }
 
 export async function refinePortfolioAction(
@@ -37,13 +47,18 @@ export async function refinePortfolioAction(
   mode: AgentMode,
   customApiKey?: string
 ): Promise<{ updatedData: PortfolioData; replyMessage: string }> {
-  if (!currentData || !userInstruction) {
-    throw new Error('Thiếu dữ liệu portfolio hoặc câu lệnh tinh chỉnh.');
+  try {
+    if (!currentData || !userInstruction) {
+      throw new Error('Thiếu dữ liệu portfolio hoặc câu lệnh tinh chỉnh.');
+    }
+    return await refinePortfolioWithGemini(
+      currentData,
+      userInstruction,
+      mode || 'guided',
+      customApiKey
+    );
+  } catch (error: any) {
+    console.error('Error in refinePortfolioAction:', error);
+    throw new Error(error.message || 'Không thể tinh chỉnh portfolio với AI.');
   }
-  return await refinePortfolioWithGemini(
-    currentData,
-    userInstruction,
-    mode || 'guided',
-    customApiKey
-  );
 }
