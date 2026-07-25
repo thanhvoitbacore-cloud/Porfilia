@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   FileText, Upload, Sparkles, Image as ImageIcon, 
-  ArrowRight, CheckCircle2, AlertCircle, Loader2, FileUp
+  ArrowRight, CheckCircle2, AlertCircle, Loader2, FileUp, FolderOpen
 } from 'lucide-react';
 import { PortfolioData } from '@/types/portfolio';
 
@@ -67,7 +67,6 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
         const text = await file.text();
         setRawText(text);
       } else {
-        // Fallback for docx/pdf or other files: read as text or text extract
         const reader = new FileReader();
         reader.onload = (e) => {
           const content = e.target?.result as string;
@@ -117,7 +116,7 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
 
   const handleAnalyze = async () => {
     if (!rawText || rawText.trim().length === 0) {
-      setErrorMsg('Vui lòng nhập, dán hoặc kéo thả file hồ sơ/CV của bạn vào đây.');
+      setErrorMsg('Vui lòng chọn file hoặc dán nội dung hồ sơ/CV của bạn.');
       return;
     }
 
@@ -152,43 +151,37 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
           Nạp Hồ sơ & Phân tích Ngành nghề
         </h1>
         <p className="text-slate-400 text-sm max-w-xl mx-auto">
-          Kéo thả file CV/Hồ sơ (PDF, Word, TXT, MD) hoặc dán trực tiếp đoạn văn bản. AI Recruiter sẽ tự động bóc tách thông tin chuyên môn của bạn.
+          Tải file từ máy tính hoặc kéo thả (PDF, Word, TXT, MD), hoặc dán nội dung thô. AI Recruiter sẽ tự động bóc tách thông tin cho bạn.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Drag & Drop File Zone + Text Area */}
+        {/* Main Document Input Area */}
         <div className="md:col-span-2 space-y-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative">
           
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-cyan-400" />
-              <span>Nội dung CV / Hồ sơ cá nhân:</span>
+          {/* Prominent Upload Button Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <label className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg cursor-pointer transition-all shadow-md shadow-cyan-500/20">
+              <FolderOpen className="w-4 h-4" />
+              <span>📁 Tải File Hồ sơ (.pdf, .docx, .txt)</span>
+              <input
+                type="file"
+                accept=".pdf,.docx,.doc,.txt,.md"
+                onChange={handleDocumentFileSelect}
+                className="hidden"
+              />
             </label>
 
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 cursor-pointer flex items-center gap-1 bg-cyan-950/60 border border-cyan-900/60 px-2.5 py-1 rounded-lg transition-all">
-                <FileUp className="w-3.5 h-3.5" />
-                <span>Kéo thả / Tải file</span>
-                <input
-                  type="file"
-                  accept=".pdf,.docx,.doc,.txt,.md"
-                  onChange={handleDocumentFileSelect}
-                  className="hidden"
-                />
-              </label>
-
-              <button
-                onClick={() => {
-                  setRawText(sampleCVText);
-                  setUploadedFileName('CV_Sample.txt');
-                }}
-                className="text-[11px] font-semibold text-slate-400 hover:text-white underline"
-              >
-                + CV Mẫu
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setRawText(sampleCVText);
+                setUploadedFileName('CV_Sample.txt');
+              }}
+              className="px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition-all"
+            >
+              + Dùng CV Mẫu
+            </button>
           </div>
 
           {/* Interactive Drag & Drop Box */}
@@ -214,17 +207,17 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
               <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-cyan-300">
                 <span className="font-mono flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>File đã nạp: <strong>{uploadedFileName}</strong></span>
+                  <span>File đã chọn: <strong>{uploadedFileName}</strong></span>
                 </span>
                 <button onClick={() => setUploadedFileName(null)} className="text-slate-400 hover:text-white">✕</button>
               </div>
             )}
 
             <textarea
-              rows={11}
+              rows={10}
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              placeholder="Kéo & thả file CV/dự án vào đây, hoặc dán trực tiếp đoạn văn bản..."
+              placeholder="Dán nội dung hồ sơ/CV vào đây, hoặc nhấn nút Tải File phía trên / Kéo thả file trực tiếp vào ô này..."
               className="w-full bg-transparent p-4 text-xs md:text-sm text-slate-200 focus:outline-none font-mono leading-relaxed resize-none"
             />
           </div>
