@@ -36,13 +36,14 @@ export const StepVibeSelector: React.FC<StepVibeSelectorProps> = ({
 
     try {
       const { generateVibesAction } = await import('@/app/actions');
-      const vibesData = await generateVibesAction(
+      const result = await generateVibesAction(
         industry,
         portfolioData.targetRole || portfolioData.personalInfo.professionalTitle,
         referenceImage,
         customApiKey
       );
 
+      const vibesData = result.data || [];
       setVibes(vibesData);
       if (vibesData && vibesData.length > 0) {
         setSelectedVibeId(vibesData[0].id);

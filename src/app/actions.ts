@@ -3,19 +3,29 @@
 import { parseDocumentWithGemini, generateVibesWithGemini, refinePortfolioWithGemini } from '@/lib/gemini';
 import { PortfolioData, VibeProposal, AgentMode } from '@/types/portfolio';
 
+export interface ActionResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 export async function parseDocumentAction(
   rawText: string,
   industryInput?: string,
   customApiKey?: string
-): Promise<{ data: PortfolioData; detectedIndustry: string }> {
+): Promise<ActionResult<{ data: PortfolioData; detectedIndustry: string }>> {
   try {
     if (!rawText || typeof rawText !== 'string' || rawText.trim().length === 0) {
-      throw new Error('Vui lòng cung cấp văn bản hồ sơ hoặc nội dung file.');
+      return { success: false, error: 'Vui lòng cung cấp văn bản hồ sơ hoặc nạp file.' };
     }
-    return await parseDocumentWithGemini(rawText, industryInput, customApiKey);
+    const result = await parseDocumentWithGemini(rawText, industryInput, customApiKey);
+    return { success: true, data: result };
   } catch (error: any) {
     console.error('Error in parseDocumentAction:', error);
-    throw new Error(error.message || 'Không thể kết nối Gemini API. Vui lòng kiểm tra lại API Key trong phần Settings.');
+    return { 
+      success: false, 
+      error: error.message || 'Không thể kết nối AI Server. Vui lòng dán API Key của bạn vào phần Settings.' 
+    };
   }
 }
 
@@ -24,20 +34,24 @@ export async function generateVibesAction(
   targetRole: string,
   referenceImageBase64?: string,
   customApiKey?: string
-): Promise<VibeProposal[]> {
+): Promise<ActionResult<VibeProposal[]>> {
   try {
     if (!industry) {
-      throw new Error('Vui lòng cung cấp ngành nghề chuyên môn.');
+      return { success: false, error: 'Vui lòng chọn ngành nghề chuyên môn.' };
     }
-    return await generateVibesWithGemini(
+    const result = await generateVibesWithGemini(
       industry,
       targetRole || 'Professional',
       referenceImageBase64,
       customApiKey
     );
+    return { success: true, data: result };
   } catch (error: any) {
     console.error('Error in generateVibesAction:', error);
-    throw new Error(error.message || 'Không thể tạo đề xuất Vibe. Vui lòng thử lại.');
+    return { 
+      success: false, 
+      error: error.message || 'Không thể tạo đề xuất Vibe.' 
+    };
   }
 }
 
@@ -46,19 +60,23 @@ export async function refinePortfolioAction(
   userInstruction: string,
   mode: AgentMode,
   customApiKey?: string
-): Promise<{ updatedData: PortfolioData; replyMessage: string }> {
+): Promise<ActionResult<{ updatedData: PortfolioData; replyMessage: string }>> {
   try {
     if (!currentData || !userInstruction) {
-      throw new Error('Thiếu dữ liệu portfolio hoặc câu lệnh tinh chỉnh.');
+      return { success: false, error: 'Thiếu dữ liệu portfolio hoặc câu lệnh tinh chỉnh.' };
     }
-    return await refinePortfolioWithGemini(
+    const result = await refinePortfolioWithGemini(
       currentData,
       userInstruction,
       mode || 'guided',
       customApiKey
     );
+    return { success: true, data: result };
   } catch (error: any) {
     console.error('Error in refinePortfolioAction:', error);
-    throw new Error(error.message || 'Không thể tinh chỉnh portfolio với AI.');
+    return { 
+      success: false, 
+      error: error.message || 'Không thể tinh chỉnh portfolio với AI.' 
+    };
   }
 }

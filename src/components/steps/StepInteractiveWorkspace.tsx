@@ -72,12 +72,14 @@ export const StepInteractiveWorkspace: React.FC<StepInteractiveWorkspaceProps> =
         customApiKey
       );
 
-      onUpdateData(result.updatedData);
+      if (result.data) {
+        onUpdateData(result.data.updatedData);
+      }
 
       const assistantMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: result.replyMessage || 'Tôi đã cập nhật nội dung theo yêu cầu của bạn.',
+        content: result.data?.replyMessage || result.error || 'Tôi đã cập nhật nội dung theo yêu cầu của bạn.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mode: agentMode,
       };

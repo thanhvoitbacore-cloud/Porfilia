@@ -127,11 +127,16 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
       const { parseDocumentAction } = await import('@/app/actions');
       const result = await parseDocumentAction(rawText, industry, customApiKey);
 
-      if (targetRole && result.data) {
-        result.data.targetRole = targetRole;
+      if (!result.success || !result.data) {
+        setErrorMsg(result.error || 'Xảy ra lỗi khi phân tích hồ sơ.');
+        return;
       }
 
-      onDocumentParsed(result.data, result.detectedIndustry || industry, referenceImage);
+      if (targetRole && result.data.data) {
+        result.data.data.targetRole = targetRole;
+      }
+
+      onDocumentParsed(result.data.data, result.data.detectedIndustry || industry, referenceImage);
     } catch (err: any) {
       setErrorMsg(err.message || 'Xảy ra lỗi kết nối AI Agent.');
     } finally {
