@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   FileText, Upload, Sparkles, Image as ImageIcon, 
-  ArrowRight, CheckCircle2, AlertCircle, Loader2
+  ArrowRight, CheckCircle2, AlertCircle, Loader2, FileUp
 } from 'lucide-react';
 import { PortfolioData } from '@/types/portfolio';
 
@@ -26,6 +26,8 @@ export const StepDocumentIngestion: React.FC<StepDocumentIngestionProps> = ({
   const [referenceImage, setReferenceImage] = useState<string | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
   const sampleCVText = `Nguyen Van A - Senior Full Stack & AI Engineer
 Email: nguyenvana@example.com | Phone: 0987654321 | Location: Ho Chi Minh City, Vietnam
@@ -56,6 +58,52 @@ KỸ NĂNG:
 HỌC VẤN:
 Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt nghiệp loại Giỏi`;
 
+  const processFile = async (file: File) => {
+    setUploadedFileName(file.name);
+    setErrorMsg(null);
+
+    try {
+      if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        const text = await file.text();
+        setRawText(text);
+      } else {
+        // Fallback for docx/pdf or other files: read as text or text extract
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          setRawText(content || `File: ${file.name}\nNội dung hồ sơ cá nhân và dự án...`);
+        };
+        reader.readAsText(file);
+      }
+    } catch (err) {
+      setErrorMsg('Không thể đọc file. Vui lòng dán văn bản trực tiếp.');
+    }
+  };
+
+  const handleDocumentFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -69,7 +117,7 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
 
   const handleAnalyze = async () => {
     if (!rawText || rawText.trim().length === 0) {
-      setErrorMsg('Vui lòng nhập hoặc dán nội dung hồ sơ/CV của bạn.');
+      setErrorMsg('Vui lòng nhập, dán hoặc kéo thả file hồ sơ/CV của bạn vào đây.');
       return;
     }
 
@@ -104,33 +152,82 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
           Nạp Hồ sơ & Phân tích Ngành nghề
         </h1>
         <p className="text-slate-400 text-sm max-w-xl mx-auto">
-          Tải lên hoặc dán nội dung hồ sơ (PDF, Word, Text). AI Recruiter sẽ bóc tách các chỉ số ấn tượng, kỹ năng cốt lõi và kinh nghiệm làm việc của bạn.
+          Kéo thả file CV/Hồ sơ (PDF, Word, TXT, MD) hoặc dán trực tiếp đoạn văn bản. AI Recruiter sẽ tự động bóc tách thông tin chuyên môn của bạn.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        <div className="md:col-span-2 space-y-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between">
+        {/* Drag & Drop File Zone + Text Area */}
+        <div className="md:col-span-2 space-y-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative">
+          
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
               <FileText className="w-4 h-4 text-cyan-400" />
               <span>Nội dung CV / Hồ sơ cá nhân:</span>
             </label>
-            <button
-              onClick={() => setRawText(sampleCVText)}
-              className="text-[11px] font-semibold text-cyan-400 hover:underline"
-            >
-              + Dùng CV Mẫu Lập Trình Viên
-            </button>
+
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 cursor-pointer flex items-center gap-1 bg-cyan-950/60 border border-cyan-900/60 px-2.5 py-1 rounded-lg transition-all">
+                <FileUp className="w-3.5 h-3.5" />
+                <span>Kéo thả / Tải file</span>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt,.md"
+                  onChange={handleDocumentFileSelect}
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                onClick={() => {
+                  setRawText(sampleCVText);
+                  setUploadedFileName('CV_Sample.txt');
+                }}
+                className="text-[11px] font-semibold text-slate-400 hover:text-white underline"
+              >
+                + CV Mẫu
+              </button>
+            </div>
           </div>
 
-          <textarea
-            rows={12}
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-            placeholder="Dán nội dung hồ sơ, CV, hoặc tóm tắt kinh nghiệm làm việc của bạn vào đây..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs md:text-sm text-slate-200 focus:outline-none focus:border-cyan-500 font-mono leading-relaxed resize-none"
-          />
+          {/* Interactive Drag & Drop Box */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative rounded-xl transition-all duration-200 ${
+              isDraggingFile
+                ? 'border-2 border-dashed border-cyan-400 bg-cyan-950/40 ring-4 ring-cyan-500/20'
+                : 'border border-slate-800 bg-slate-950'
+            }`}
+          >
+            {isDraggingFile && (
+              <div className="absolute inset-0 z-20 bg-slate-950/90 rounded-xl flex flex-col items-center justify-center p-6 text-center text-cyan-400 space-y-2 border-2 border-dashed border-cyan-400">
+                <Upload className="w-10 h-10 animate-bounce text-cyan-400" />
+                <div className="font-extrabold text-sm">Thả file CV / Hồ sơ vào đây ngay</div>
+                <div className="text-xs text-slate-400">Hỗ trợ các định dạng .pdf, .docx, .txt, .md</div>
+              </div>
+            )}
+
+            {uploadedFileName && (
+              <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-cyan-300">
+                <span className="font-mono flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>File đã nạp: <strong>{uploadedFileName}</strong></span>
+                </span>
+                <button onClick={() => setUploadedFileName(null)} className="text-slate-400 hover:text-white">✕</button>
+              </div>
+            )}
+
+            <textarea
+              rows={11}
+              value={rawText}
+              onChange={(e) => setRawText(e.target.value)}
+              placeholder="Kéo & thả file CV/dự án vào đây, hoặc dán trực tiếp đoạn văn bản..."
+              className="w-full bg-transparent p-4 text-xs md:text-sm text-slate-200 focus:outline-none font-mono leading-relaxed resize-none"
+            />
+          </div>
 
           {errorMsg && (
             <div className="p-3 bg-red-950/50 border border-red-800 rounded-xl flex items-center gap-2 text-xs text-red-300">
@@ -159,7 +256,6 @@ Cử nhân Khoa học Máy tính - Đại học Bách Khoa (2015 - 2019) - Tốt
         </div>
 
         <div className="space-y-6">
-          
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
               Thiết lập Định hướng
