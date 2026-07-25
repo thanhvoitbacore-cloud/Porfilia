@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { PortfolioData, VibeProposal, AgentMode } from '@/types/portfolio';
 
 function getApiKey(customKey?: string): string {
@@ -8,12 +7,61 @@ function getApiKey(customKey?: string): string {
   return process.env.GEMINI_API_KEY || '';
 }
 
-function getAIClient(customKey?: string) {
-  const key = getApiKey(customKey);
+async function callGeminiRestAPI(
+  promptParts: any[],
+  customApiKey?: string,
+  temperature: number = 0.2
+): Promise<string> {
+  const key = getApiKey(customApiKey);
   if (!key) {
-    throw new Error('Chưa tìm thấy Gemini API Key. Vui lòng mở "Settings" trên góc phải web và dán API Key của bạn hoặc cài đặt biến môi trường GEMINI_API_KEY trên Vercel.');
+    throw new Error('Chưa tìm thấy Gemini API Key. Vui lòng mở "Settings" (góc trên bên phải) và dán API Key của bạn, hoặc thêm GEMINI_API_KEY trên Vercel.');
   }
-  return new GoogleGenAI({ apiKey: key });
+
+  const primaryModel = 'gemini-2.5-flash';
+  const fallbackModel = 'gemini-1.5-flash';
+
+  const makeRequest = async (model: string) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    return await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: promptParts }],
+        generationConfig: {
+          temperature,
+          responseMimeType: 'application/json',
+        },
+      }),
+    });
+  };
+
+  let response = await makeRequest(primaryModel);
+
+  if (!response.ok) {
+    console.warn(`Primary model ${primaryModel} failed (${response.status}), trying ${fallbackModel}...`);
+    response = await makeRequest(fallbackModel);
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let message = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (parsed.error && parsed.error.message) {
+        message = parsed.error.message;
+      }
+    } catch (e) {
+      // Use raw error text
+    }
+    throw new Error(`Gemini API Error (${response.status}): ${message}`);
+  }
+
+  const data = await response.json();
+  const outputText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!outputText) {
+    throw new Error('Mô hình Gemini không trả về kết quả nội dung hợp lệ.');
+  }
+  return outputText;
 }
 
 export async function parseDocumentWithGemini(
@@ -21,8 +69,6 @@ export async function parseDocumentWithGemini(
   industryInput?: string,
   customApiKey?: string
 ): Promise<{ data: PortfolioData; detectedIndustry: string }> {
-  const ai = getAIClient(customApiKey);
-
   const prompt = `You are a Senior Executive Recruiter & Portfolio Architect. Analyze this resume/raw document text and extract structured portfolio data.
 
 Target Industry Preference (if any): "${industryInput || 'Auto-detect'}"
@@ -107,16 +153,8 @@ Return ONLY a valid, strictly formatted JSON object with no markdown formatting 
   "targetRole": "Inferred Target Role"
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      temperature: 0.2,
-      responseMimeType: 'application/json',
-    },
-  });
-
-  const parsedJSON = cleanAndParseJSON(response.text || '');
+  const responseText = await callGeminiRestAPI([{ text: prompt }], customApiKey, 0.2);
+  const parsedJSON = cleanAndParseJSON(responseText);
 
   return {
     data: parsedJSON,
@@ -130,8 +168,6 @@ export async function generateVibesWithGemini(
   referenceImageBase64?: string,
   customApiKey?: string
 ): Promise<VibeProposal[]> {
-  const ai = getAIClient(customApiKey);
-
   let imagePromptPart = '';
   if (referenceImageBase64) {
     imagePromptPart = `The user provided a visual reference image (screenshot of a portfolio/design template they love). Parse its Visual DNA into proposal 1!`;
@@ -220,34 +256,28 @@ Return ONLY a JSON array containing exactly 3 objects:
   }
 ]`;
 
-  const contents: any[] = [prompt];
+  const promptParts: any[] = [{ text: prompt }];
+
   if (referenceImageBase64) {
     const mimeMatch = referenceImageBase64.match(/^data:(image\/\w+);base64,/);
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
     const base64Data = referenceImageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-    contents.push({
+    promptParts.push({
       inlineData: {
-        data: base64Data,
         mimeType: mimeType,
+        data: base64Data,
       },
     });
   }
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: contents,
-    config: {
-      temperature: 0.4,
-      responseMimeType: 'application/json',
-    },
-  });
+  const responseText = await callGeminiRestAPI(promptParts, customApiKey, 0.4);
+  const parsedVibes = cleanAndParseJSON(responseText);
 
-  const parsedVibes = cleanAndParseJSON(response.text || '');
   if (Array.isArray(parsedVibes) && parsedVibes.length > 0) {
     return parsedVibes;
   }
-  throw new Error('Failed to generate valid style proposals');
+  throw new Error('Không thể tạo phong cách thiết kế hợp lệ từ AI Art Director.');
 }
 
 export async function refinePortfolioWithGemini(
@@ -256,8 +286,6 @@ export async function refinePortfolioWithGemini(
   mode: AgentMode,
   customApiKey?: string
 ): Promise<{ updatedData: PortfolioData; replyMessage: string }> {
-  const ai = getAIClient(customApiKey);
-
   const prompt = `You are an AI Portfolio Refinement Specialist operating in "${mode.toUpperCase()}" mode.
 The user wants to update their portfolio data.
 
@@ -273,16 +301,9 @@ Output ONLY valid JSON matching this format:
   "updatedData": { ... }
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      temperature: 0.3,
-      responseMimeType: 'application/json',
-    },
-  });
+  const responseText = await callGeminiRestAPI([{ text: prompt }], customApiKey, 0.3);
+  const result = cleanAndParseJSON(responseText);
 
-  const result = cleanAndParseJSON(response.text || '');
   return {
     updatedData: result.updatedData || currentData,
     replyMessage: result.replyMessage || 'Tôi đã cập nhật nội dung theo yêu cầu của bạn.',
@@ -300,6 +321,6 @@ function cleanAndParseJSON(rawText: string): any {
     return JSON.parse(cleanText);
   } catch (err) {
     console.error('Failed to parse JSON:', rawText);
-    throw new Error('Received invalid JSON format from AI model. Please try again.');
+    throw new Error('Nội dung phản hồi từ AI không đúng định dạng JSON.');
   }
 }
