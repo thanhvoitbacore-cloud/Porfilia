@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Sparkles, Download, Upload, Settings, CheckCircle2, 
   Key, Bot, FileCode2, Layers, ShieldCheck 
@@ -29,6 +30,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempConfig, setTempConfig] = useState<ProviderConfig>(customConfig);
   const [tempMode, setTempMode] = useState<AgentMode>(agentMode);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const steps = [
     { num: 1, label: 'Nạp Hồ sơ' },
@@ -132,9 +138,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 max-w-md w-full shadow-2xl space-y-4 my-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
+      {isSettingsOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5 my-auto max-h-[90vh] overflow-y-auto custom-scrollbar animate-scaleUp">
             
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-2">
@@ -243,7 +249,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
