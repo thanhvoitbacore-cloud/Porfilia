@@ -133,8 +133,8 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-6">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 max-w-md w-full shadow-2xl space-y-4 my-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
             
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-2">
